@@ -30,5 +30,6 @@
 	  "**/WSL/**": true,
 	  "**/Docker/**": true,
     },
+    "powershell.cwd": "PowerShell",
   },
 }
