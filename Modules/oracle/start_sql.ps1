@@ -8,8 +8,6 @@ if ( $env:SECRETS_ENV ){
     $envFile = -resolve-path $env:SECRETS_ENV
 }
 
-$scriptDir = $PSScriptRoot
-
 if (-not (Test-Path $envFile)) {
     Write-Error "Environment file not found: $envFile"
     return

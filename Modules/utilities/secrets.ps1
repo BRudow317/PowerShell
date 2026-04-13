@@ -13,7 +13,7 @@ function secrets {
     [Parameter(Mandatory=$false)]
     [string]$EnvPath,
     [Parameter(Mandatory=$false)]
-    [switch]$Evm = $true  # Environment variable mode: check $env:SECRETS_ENV for the .env path
+    [System.Boolean]$Evm = $true  # Environment variable mode: check $env:SECRETS_ENV for the .env path
   )
 
   $envResolved = $null
