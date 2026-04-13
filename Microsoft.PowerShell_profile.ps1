@@ -1,0 +1,1 @@
+# Default PowerShell profile for standard terminal session.

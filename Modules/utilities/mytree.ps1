@@ -8,7 +8,7 @@ param(
     [string]$Safety = '1000',
 
     [ValidateSet('path', 'json', 'tree')]
-    [string]$Output = 'path',
+    [string]$Output = 'tree',
 
     [Alias('w')]
     [switch]$WindowsPaths,

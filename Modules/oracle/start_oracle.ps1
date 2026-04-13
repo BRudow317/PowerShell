@@ -1,5 +1,6 @@
+function start_oracle {
 # Usage:
-#     & "Q:\db\oracledb\start.ps1" -env homelab
+#     start_oracle -env homelab
 [CmdletBinding()]
 Param([string]$env = "homelab")
 
@@ -174,3 +175,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $global:LASTEXITCODE = 0
+}

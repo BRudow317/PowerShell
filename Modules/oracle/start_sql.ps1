@@ -1,15 +1,18 @@
-#!/usr/bin/env pwsh
+function start_sqlplus {
 param(
     [string]$env = "homelab"
 )
 
 # Get the directory of this script
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$envFile = Join-Path $scriptDir ".env.md"
+if ( $env:SECRETS_ENV ){
+    $envFile = -resolve-path $env:SECRETS_ENV
+}
+
+$scriptDir = $PSScriptRoot
 
 if (-not (Test-Path $envFile)) {
     Write-Error "Environment file not found: $envFile"
-    exit 1
+    return
 }
 
 # Parse the .env.md file
@@ -42,9 +45,9 @@ $sqlplusPath = Join-Path $env:ORACLE_HOME "bin\sqlplus.exe"
 if (-not (Test-Path $sqlplusPath)) {
     Write-Error "sqlplus not found at $env:ORACLE_HOME\bin\sqlplus.exe"
     Write-Error "Please verify ORACLE_HOME is set correctly"
-    exit 1
+    return
 }
 
 # Start sqlplus with the connection string
-# "$user/$pass@$dbHost`:$port/$service"
 & $sqlplusPath $connectionString
+}

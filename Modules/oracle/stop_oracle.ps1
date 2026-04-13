@@ -1,5 +1,6 @@
+function stop_oracle {
 # Usage:
-#     & "Q:\db\oracledb\stop.ps1" -env homelab
+#     stop_oracle -env homelab
 
 [CmdletBinding()]
 Param([string]$env = "homelab")
@@ -147,3 +148,4 @@ if ($lsnrUp) {
 
 # Script succeeded if we reached here without throw.
 $global:LASTEXITCODE = 0
+}
