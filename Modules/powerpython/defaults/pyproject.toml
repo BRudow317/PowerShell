@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quickbitlabs"
+version = "0.1.0"
+description = "quickbitlabs"
+requires-python = ">=3.11"
+dependencies = [
+    # web framework 
+    "fastapi",
+    "uvicorn",
+    "gunicorn",
+    # Data
+    pyarrow
+    duckdb
+    pandas
+    polars
+    # Encryption
+    "PyJWT",
+    # "argon2-cffi",
+    "cryptography",
+    # database drivers
+    "oracledb",
+    # Misc
+    "tzdata",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[tool.setuptools]
+packages = ["quickbitlabs"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

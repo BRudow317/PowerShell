@@ -1,0 +1,36 @@
+{
+  "folders": [
+    {"path": ".", "default": true},
+    {"path": "Q:/scripts"},
+    {"path": "C:\\Users\\rmedi\\OneDrive\\Documents\\PowerShell"},
+    {"path": "Q:/db"},
+    {"path": "Q:/library"},
+    {"path": "Q/.secrets"},
+    {"path": "Q:/", "name": "q"},
+	
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/$RECYCLE.BIN": true,
+      "**/$RECYCLE.BIN/**": true,
+      "**/$Recycle.Bin": true,
+      "**/$Recycle.Bin/**": true,
+      "**/System Volume Information": true,
+      "**/System Volume Information/**": true,
+	  "**/WSL/**": true,
+	  "**/Docker/**": true,
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/$RECYCLE.BIN": true,
+      "**/$RECYCLE.BIN/**": true,
+      "**/$Recycle.Bin": true,
+      "**/$Recycle.Bin/**": true,
+      "**/System Volume Information": true,
+      "**/System Volume Information/**": true,
+	  "**/WSL/**": true,
+	  "**/Docker/**": true,
+    },
+  },
+}
