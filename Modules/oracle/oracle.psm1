@@ -4,4 +4,4 @@ foreach ($file in $helperFiles) {
     . $file.FullName
 }
 
-Export-ModuleMember -Function *
+Export-ModuleMember -Function * # -Alias * # -Cmdlet * -Variable * -Property *

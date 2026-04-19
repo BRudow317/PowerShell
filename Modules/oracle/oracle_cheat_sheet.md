@@ -11,43 +11,48 @@ SET LINESIZE 200 PAGESIZE 100;
 ```
 
 ## Instance & Listener
-```shell
-# Check Instance status
+```sql
+-- Check Instance status
 SELECT instance_name, status, open_mode FROM v$instance, v$database;
-# Startup (Immediate)
+-- Startup (Immediate)
 STARTUP;
-# Shutdown (Immediate)
+-- Shutdown (Immediate)
 SHUTDOWN IMMEDIATE;
-# Check Listener status
+-- Check Listener status
 lsnrctl status
-# Start Listener
+-- Start Listener
 lsnrctl start
+
+-- Memory Settings
+SHOW PARAMETER sga_target;
+SHOW PARAMETER pga_aggregate_target;
+
 ```
 
 ## Multitenant (CDB/PDB)
-```shell
-# Show all PDBs
+```sql
+-- Show all PDBs
 show pdbs;
-# Open specific PDB
+-- Open specific PDB
 alter pluggable database homelab open;
-# Open ALL PDBs
+-- Open ALL PDBs
 alter pluggable database all open;
-# Switch to PDB container
+-- Switch to PDB container
 alter session set container=homelab;
-# Switch to Root container
+-- Switch to Root container
 alter session set container=CDB$ROOT;
-# Save PDB state (keeps PDB open after CDB restart)
+-- Save PDB state (keeps PDB open after CDB restart)
 alter pluggable database homelab save state;
 ```
 
 ## Health & User Management
-```shell
-# List all users
+```sql
+-- List all users
 select username, account_status from dba_users;
-# Check tablespace usage
+-- Check tablespace usage
 SELECT tablespace_name, used_space, tablespace_size FROM dba_tablespace_usage_metrics;
-# List datafiles
+-- List datafiles
 SELECT file_name, tablespace_name, bytes/1024/1024 MB FROM dba_data_files;
-# Active sessions
+-- Active sessions
 SELECT sid, serial#, username, status FROM v$session WHERE status = 'ACTIVE';
 ```
