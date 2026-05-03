@@ -1,4 +1,35 @@
-# Functions to mimic some of the functionality of the Unix shell
+# ==========================================
+# Use the C binaries from git
+# ==========================================
+$gitGnuPath = "C:\Program Files\Git\usr\bin"
+$gitBinariesFound = $false
+$fakeAliases = @("ls", "rm", "cp", "mv", "cat", "echo", "pwd")
+
+
+
+if (Test-Path $gitGnuPath) {
+    if ($env:PATH -notmatch [regex]::Escape($gitGnuPath)) {
+        $env:PATH = "$gitGnuPath;" + $env:PATH
+    }
+
+    $gitBinariesFound = $true
+
+    foreach ($alias in $fakeAliases) {
+    if (Test-Path "alias:$alias") {
+        Remove-Item "alias:$alias" -Force -ErrorAction SilentlyContinue
+    }
+}
+
+} else {
+    Write-Warning "Git GNU binaries not found at $gitGnuPath"
+}
+
+# ==========================================
+# Best guess implementations of common Linux commands
+# ==========================================
+function ll { ls -alF --color=auto $args }
+function grep { git grep --no-index $args }
+
 # Does the the rough equivalent of dir /s /b. For example, dirs *.png is dir /s /b *.png
 function dirs {
     if ($args.Count -gt 0) {
@@ -8,34 +39,12 @@ function dirs {
     }
 }
 
-function sed($file, $find, $replace) {
-    (Get-Content $file).replace("$find", $replace) | Set-Content $file
-}
-
-function which($name) {
-    Get-Command $name | Select-Object -ExpandProperty Definition
-}
-
 function export($name, $value) {
     set-item -force -path "env:$name" -value $value;
 }
 
 function pgrep($name) {
     Get-Process $name
-}
-
-function grep {
-    param (
-        [string]$regex,
-        [string]$dir
-    )
-    process {
-        if ($dir) {
-            Get-ChildItem -Path $dir -Recurse -File | Select-String -Pattern $regex
-        } else {     # Use if piped input is provided
-            $input | Select-String -Pattern $regex
-        }
-    }
 }
 
 function pkill {
@@ -51,110 +60,10 @@ function pkill {
     }
 }
 
-function head {
-    param (
-        [string]$Path,
-        [int]$n = 10
-    )
-    process {
-        if ($Path) {
-            Get-Content $Path -Head $n
-        } else {
-            $input | Select-Object -First $n
-        }
-    }
-}
-
-function tail {
-    param (
-        [string]$Path,
-        [int]$n = 10
-    )
-    process {
-        if ($Path) {
-            Get-Content $Path -Tail $n
-        } else {
-            $input | Select-Object -Last $n
-        }
-    }
-}
-
-# Unzip function
-function unzip {
-    param (
-        [string]$file
-    )
-    process {
-        if ($file) {
-            $fullPath = Join-Path -Path $pwd -ChildPath $file
-            if (Test-Path $fullPath) {
-                Write-Output "Extracting $file to $pwd"
-                Expand-Archive -Path $fullPath -DestinationPath $pwd
-            } else {
-                Write-Output "File $file does not exist in the current directory"
-            }
-        } else {
-            $input | ForEach-Object {
-                $fullPath = Join-Path -Path $pwd -ChildPath $_
-                if (Test-Path $fullPath) {
-                    Write-Output "Extracting $_ to $pwd"
-                    Expand-Archive -Path $fullPath -DestinationPath $pwd
-                } else {
-                    Write-Output "File $_ does not exist in the current directory"
-                }
-            }
-        }
-    }
-}
-
-function du {
-    param (
-        [string]$Path = (Get-Location)
-    )
-    try {
-        # Get all items recursively at the specified path.
-        $items = Get-ChildItem -Path $Path -Recurse -ErrorAction SilentlyContinue
-        # Separate files and directories
-        $files = $items | Where-Object { -not $_.PSIsContainer }
-        $directories = $items | Where-Object { $_.PSIsContainer }
-        # Measure properties
-        $fileCount = $files.Count
-        $directoryCount = $directories.Count
-        $totalBytes = ($files | Measure-Object -Property Length -Sum).Sum
-        # Convert bytes to a human-readable format
-        if ($totalBytes -ge 1TB) {
-            $size = "{0:N2} TB" -f ($totalBytes / 1TB)
-        } elseif ($totalBytes -ge 1GB) {
-            $size = "{0:N2} GB" -f ($totalBytes / 1GB)
-        } elseif ($totalBytes -ge 1MB) {
-            $size = "{0:N2} MB" -f ($totalBytes / 1MB)
-        } elseif ($totalBytes -ge 1KB) {
-            $size = "{0:N2} KB" -f ($totalBytes / 1KB)
-        } else {
-            $size = "{0:N2} bytes" -f $totalBytes
-        }
-        # Output results
-        Write-Output "Directory Count : $directoryCount"
-        Write-Output "File Count      : $fileCount"
-        Write-Output "Total Size      : $size"
-    } catch {
-        Write-Output "An error occurred: $_"
-    }
-}
-
-# Short ulities
-function ll { Get-ChildItem -Path $pwd -File }
-function df {get-volume}
-
-# Aliases for reboot and poweroff
 function Reboot-System {Restart-Computer -Force}
 Set-Alias reboot Reboot-System
 function Poweroff-System {Stop-Computer -Force}
 Set-Alias poweroff Poweroff-System
-
-# Useful file-management functions
-function cd... { Set-Location ..\.. }
-function cd.... { Set-Location ..\..\.. }
 
 # Hash functions
 function md5 {
@@ -297,29 +206,145 @@ function top {
     }
 }
 
-function touch {
-    param (
-        [Parameter(Mandatory = $true, ValueFromRemainingArguments = $true)]
-        [string[]]$files
-    )
 
-    foreach ($file in $files) {
-        if (Test-Path $file) {
-            (Get-Item $file).LastWriteTime = Get-Date
-        } else {
-            New-Item -ItemType File -Path $file | Out-Null
+# ==========================================
+# if no git binaries, these need exported
+# ==========================================
+if (-not $gitBinariesFound) {
+    Write-Host "No git binaries, utilizing backup functions $gitGnuPath" -ForegroundColor Yellow
+
+
+    function which($name) {
+        Get-Command $name | Select-Object -ExpandProperty Definition
+    }
+
+
+
+    function grep {
+        param (
+            [string]$regex,
+            [string]$dir
+        )
+        process {
+            if ($dir) {
+                Get-ChildItem -Path $dir -Recurse -File | Select-String -Pattern $regex
+            } else {     # Use if piped input is provided
+                $input | Select-String -Pattern $regex
+            }
         }
     }
+
+
+
+    function head {
+        param (
+            [string]$Path,
+            [int]$n = 10
+        )
+        process {
+            if ($Path) {
+                Get-Content $Path -Head $n
+            } else {
+                $input | Select-Object -First $n
+            }
+        }
+    }
+
+    function tail {
+        param (
+            [string]$Path,
+            [int]$n = 10
+        )
+        process {
+            if ($Path) {
+                Get-Content $Path -Tail $n
+            } else {
+                $input | Select-Object -Last $n
+            }
+        }
+    }
+
+    function unzip {
+        param (
+            [string]$file
+        )
+        process {
+            if ($file) {
+                $fullPath = Join-Path -Path $pwd -ChildPath $file
+                if (Test-Path $fullPath) {
+                    Write-Output "Extracting $file to $pwd"
+                    Expand-Archive -Path $fullPath -DestinationPath $pwd
+                } else {
+                    Write-Output "File $file does not exist in the current directory"
+                }
+            } else {
+                $input | ForEach-Object {
+                    $fullPath = Join-Path -Path $pwd -ChildPath $_
+                    if (Test-Path $fullPath) {
+                        Write-Output "Extracting $_ to $pwd"
+                        Expand-Archive -Path $fullPath -DestinationPath $pwd
+                    } else {
+                        Write-Output "File $_ does not exist in the current directory"
+                    }
+                }
+            }
+        }
+    }
+
+    function du {
+        param (
+            [string]$Path = (Get-Location)
+        )
+        try {
+            # Get all items recursively at the specified path.
+            $items = Get-ChildItem -Path $Path -Recurse -ErrorAction SilentlyContinue
+            # Separate files and directories
+            $files = $items | Where-Object { -not $_.PSIsContainer }
+            $directories = $items | Where-Object { $_.PSIsContainer }
+            # Measure properties
+            $fileCount = $files.Count
+            $directoryCount = $directories.Count
+            $totalBytes = ($files | Measure-Object -Property Length -Sum).Sum
+            # Convert bytes to a human-readable format
+            if ($totalBytes -ge 1TB) {
+                $size = "{0:N2} TB" -f ($totalBytes / 1TB)
+            } elseif ($totalBytes -ge 1GB) {
+                $size = "{0:N2} GB" -f ($totalBytes / 1GB)
+            } elseif ($totalBytes -ge 1MB) {
+                $size = "{0:N2} MB" -f ($totalBytes / 1MB)
+            } elseif ($totalBytes -ge 1KB) {
+                $size = "{0:N2} KB" -f ($totalBytes / 1KB)
+            } else {
+                $size = "{0:N2} bytes" -f $totalBytes
+            }
+            # Output results
+            Write-Output "Directory Count : $directoryCount"
+            Write-Output "File Count      : $fileCount"
+            Write-Output "Total Size      : $size"
+        } catch {
+            Write-Output "An error occurred: $_"
+        }
+    }
+
+    function ll { Get-ChildItem -Path $pwd -File }
+    function df {get-volume}
+
+    function cd... { Set-Location ..\.. }
+    function cd.... { Set-Location ..\..\.. }
+
+    function touch {
+        param (
+            [Parameter(Mandatory = $true, ValueFromRemainingArguments = $true)]
+            [string[]]$files
+        )
+
+        foreach ($file in $files) {
+            if (Test-Path $file) {
+                (Get-Item $file).LastWriteTime = Get-Date
+            } else {
+                New-Item -ItemType File -Path $file | Out-Null
+            }
+        }
+    }
+
 }
-
-# function touch {
-#     param([string[]]$Paths)
-
-#     foreach ($Path in $Paths) {
-#         if (Test-Path $Path) {
-#             (Get-Item $Path).LastWriteTime = Get-Date
-#         } else {
-#             New-Item -ItemType File -Path $Path | Out-Null
-#         }
-#     }
-# }

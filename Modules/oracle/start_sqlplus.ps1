@@ -37,9 +37,10 @@ function Get-EnvValue {
 # Extract credentials for the specified environment
 $user = Get-EnvValue -Content $envContent -Key "oracle_${env}_user"
 $pass = Get-EnvValue -Content $envContent -Key "oracle_${env}_pass"
+$role = Get-EnvValue -Content $envContent -Key "oracle_${env}_role"
 $dbHost = Get-EnvValue -Content $envContent -Key "oracle_${env}_host"
 $port = Get-EnvValue -Content $envContent -Key "oracle_${env}_port"
-$service = Get-EnvValue -Content $envContent -Key "oracle_${env}_service_name"
+$service = Get-EnvValue -Content $envContent -Key "oracle_${env}_service"
 if (-not $service) {
     $service = Get-EnvValue -Content $envContent -Key "oracle_${env}_service"
 }
@@ -51,7 +52,7 @@ if (-not $user -or -not $pass -or -not $dbHost -or -not $port) {
 }
 
 if ($ConnectBy -eq "Service" -and -not $service) {
-    Write-Error "ConnectBy=Service requires oracle_${env}_service_name (or oracle_${env}_service)"
+    Write-Error "ConnectBy=Service requires oracle_${env}_service (or oracle_${env}_service)"
     return
 }
 
@@ -68,7 +69,7 @@ if ($ConnectBy -eq "Auto") {
         $ConnectBy = "SID"
     }
     else {
-        Write-Error "No Oracle connect identifier found. Add oracle_${env}_service_name (or oracle_${env}_service) or oracle_${env}_sid"
+        Write-Error "No Oracle connect identifier found. Add oracle_${env}_service (or oracle_${env}_service) or oracle_${env}_sid"
         return
     }
 }
@@ -79,12 +80,20 @@ if ($ConnectBy -eq "Service") {
     $env:ORACLE_SID = $service
 }
 else {
-    # Explicit descriptor with SID for DBs not registered by service name
+    # Explicit descriptor with SID for DBs not registered by service
     $connectDescriptor = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=${dbHost})(PORT=${port}))(CONNECT_DATA=(SID=${sid})))"
     $env:ORACLE_SID = $sid
 }
 
-$connectionString = "${user}/${pass}@${connectDescriptor}"
+# SQL*Plus treats '@' as the connect-identifier separator, so quote passwords
+# to support special characters like '@'.
+$escapedUser = $user.Replace('"', '""')
+$escapedPass = $pass.Replace('"', '""')
+$connectionString = '"' + $escapedUser + '"/"' + $escapedPass + '"@' + $connectDescriptor
+$roleArg = $null
+if ($role -and $role.Trim() -and $role.ToLowerInvariant() -ne "default") {
+    $roleArg = $role.Trim().ToUpperInvariant()
+}
 # Set ORACLE_HOME if not already set
 if (-not $env:ORACLE_HOME) {
     $env:ORACLE_HOME = "C:\ORACLEHOME\WINDOWS.X64_193000_db_home"
@@ -101,21 +110,35 @@ if (-not (Test-Path $sqlplusPath)) {
 # In Auto mode, prefer service name but transparently fallback to SID on ORA-12514.
 if ($requestedConnectBy -eq "Auto" -and $ConnectBy -eq "Service" -and $sid) {
     $serviceConnectionString = $connectionString
-    $probeOutput = (
-        "exit" | & $sqlplusPath -L -S $serviceConnectionString 2>&1 | Out-String
-    )
+    if ($roleArg) {
+        $probeOutput = (
+            "exit" | & $sqlplusPath -L -S $serviceConnectionString "AS" $roleArg 2>&1 | Out-String
+        )
+    }
+    else {
+        $probeOutput = (
+            "exit" | & $sqlplusPath -L -S $serviceConnectionString 2>&1 | Out-String
+        )
+    }
 
     if ($probeOutput -match "ORA-12514") {
         Write-Warning "Service '$service' is not registered with listener; retrying with SID '$sid'."
         $ConnectBy = "SID"
         $connectDescriptor = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=${dbHost})(PORT=${port}))(CONNECT_DATA=(SID=${sid})))"
-        $connectionString = "${user}/${pass}@${connectDescriptor}"
+        $connectionString = '"' + $escapedUser + '"/"' + $escapedPass + '"@' + $connectDescriptor
         $env:ORACLE_SID = $sid
 
         # Probe the SID connection before attempting to launch interactive sqlplus
-        $sidProbeOutput = (
-            "exit" | & $sqlplusPath -L -S $connectionString 2>&1 | Out-String
-        )
+        if ($roleArg) {
+            $sidProbeOutput = (
+                "exit" | & $sqlplusPath -L -S $connectionString "AS" $roleArg 2>&1 | Out-String
+            )
+        }
+        else {
+            $sidProbeOutput = (
+                "exit" | & $sqlplusPath -L -S $connectionString 2>&1 | Out-String
+            )
+        }
         $sidExitCode = $LASTEXITCODE
         if ($sidProbeOutput -match "ORA-12505" -or ($sidExitCode -ne 0 -and $sidProbeOutput -match "ORA-")) {
             Write-Error "SID '$sid' is not registered with the listener at ${dbHost}:${port}. Run 'lsnrctl status' on the server to see registered instances."
@@ -130,5 +153,10 @@ if ($requestedConnectBy -eq "Auto" -and $ConnectBy -eq "Service" -and $sid) {
 
 # Start sqlplus with the connection string
 Write-Host "Connecting to ${dbHost}:$port using $ConnectBy"
-& $sqlplusPath -L $connectionString
+if ($roleArg) {
+    & $sqlplusPath -L $connectionString "AS" $roleArg
+}
+else {
+    & $sqlplusPath -L $connectionString
+}
 }
