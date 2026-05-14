@@ -35,29 +35,29 @@ function Get-EnvValue {
 }
 
 # Extract credentials for the specified environment
-$user = Get-EnvValue -Content $envContent -Key "oracle_${env}_user"
-$pass = Get-EnvValue -Content $envContent -Key "oracle_${env}_pass"
-$role = Get-EnvValue -Content $envContent -Key "oracle_${env}_role"
-$dbHost = Get-EnvValue -Content $envContent -Key "oracle_${env}_host"
-$port = Get-EnvValue -Content $envContent -Key "oracle_${env}_port"
-$service = Get-EnvValue -Content $envContent -Key "oracle_${env}_service"
+$user = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_USER"
+$pass = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_PWD"
+$role = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_ROLE"
+$dbHost = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_HOST"
+$port = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_PORT"
+$service = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_SERVICE"
 if (-not $service) {
-    $service = Get-EnvValue -Content $envContent -Key "oracle_${env}_service"
+    $service = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_SERVICE"
 }
-$sid = Get-EnvValue -Content $envContent -Key "oracle_${env}_sid"
+$sid = Get-EnvValue -Content $envContent -Key "ORACLE_${env}_SID"
 
 if (-not $user -or -not $pass -or -not $dbHost -or -not $port) {
-    Write-Error "Missing required keys for environment '$env'. Required: oracle_${env}_user, oracle_${env}_pass, oracle_${env}_host, oracle_${env}_port"
+    Write-Error "Missing required keys for environment '$env'. Required: ORACLE_${env}_USER, ORACLE_${env}_PASS, ORACLE_${env}_HOST, ORACLE_${env}_PORT"
     return
 }
 
 if ($ConnectBy -eq "Service" -and -not $service) {
-    Write-Error "ConnectBy=Service requires oracle_${env}_service (or oracle_${env}_service)"
+    Write-Error "ConnectBy=Service requires ORACLE_${env}_SERVICE"
     return
 }
 
 if ($ConnectBy -eq "SID" -and -not $sid) {
-    Write-Error "ConnectBy=SID requires oracle_${env}_sid"
+    Write-Error "ConnectBy=SID requires ORACLE_${env}_SID"
     return
 }
 
@@ -69,7 +69,7 @@ if ($ConnectBy -eq "Auto") {
         $ConnectBy = "SID"
     }
     else {
-        Write-Error "No Oracle connect identifier found. Add oracle_${env}_service (or oracle_${env}_service) or oracle_${env}_sid"
+        Write-Error "No Oracle connect identifier found. Add ORACLE_${env}_SERVICE (or ORACLE_${env}_SERVICE) or ORACLE_${env}_SID"
         return
     }
 }
